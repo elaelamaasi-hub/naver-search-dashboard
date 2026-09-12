@@ -66,8 +66,8 @@ if "searched_keywords" not in st.session_state:
 # --- 사이드바 설정 영역 ---
 st.sidebar.markdown("## ⚙️ 설정 및 검색 조건")
 
-# 1. API 인증 정보
-with st.sidebar.expander("🔑 네이버 API 인증 설정", expanded=True):
+# 1. API 인증 정보 (대시보드 UI에 키를 노출하지 않고 환경변수/Secrets에서 안전하게 로드)
+with st.sidebar.expander("🔑 네이버 API 인증 설정", expanded=False):
     auth_type = st.radio(
         "인증 규격 선택",
         options=["ncloud_apigw", "naver_developers"],
@@ -75,35 +75,14 @@ with st.sidebar.expander("🔑 네이버 API 인증 설정", expanded=True):
         index=0
     )
     
-    from dotenv import load_dotenv
-    load_dotenv(override=True)
-    
-    def _get_val(key: str) -> str:
-        v = os.getenv(key, "")
-        if not v and hasattr(st, "secrets") and key in st.secrets:
-            v = str(st.secrets[key])
-        return v
-
-    default_client_id = _get_val("NAVER_CLIENT_ID") or _get_val("NCLOUD_API_KEY_ID")
-    default_client_secret = _get_val("NAVER_CLIENT_SECRET") or _get_val("NCLOUD_API_KEY")
-    
-    client_id_input = st.text_input(
-        "Client ID / API Key ID",
-        value=default_client_id,
-        type="password" if default_client_id else "default",
-        placeholder=".env 파일 또는 직접 입력"
-    )
-    client_secret_input = st.text_input(
-        "Client Secret / API Key",
-        value=default_client_secret,
-        type="password",
-        placeholder=".env 파일 또는 직접 입력"
-    )
-    
-    if client_id_input and client_secret_input:
-        st.caption("✅ 인증키가 설정되었습니다.")
+    # 인증키 유효성 체크 (화면에는 키 값을 노출하지 않고 연결 상태만 확인)
+    test_creds = get_api_credentials(auth_type=auth_type)
+    if test_creds:
+        st.success("🔒 API 인증키가 안전하게 연결되었습니다.")
+        st.caption("※ 보안을 위해 인증키는 화면에 표시되지 않으며, `.env` 및 배포 환경의 Secrets에서 안전하게 로드됩니다.")
     else:
-        st.caption("⚠️ `.env` 파일에 키를 입력하거나 위 입력칸에 입력해 주세요.")
+        st.warning("⚠️ API 인증키가 감지되지 않았습니다.")
+        st.caption("`.env` 파일이나 Streamlit Cloud의 Secrets 설정을 확인해 주세요.")
         
     st.markdown("""
     <small>
@@ -183,15 +162,11 @@ if run_button:
         st.error("분석할 검색어를 최소 1개 이상 입력해 주세요.")
         st.stop()
 
-    # 2. 인증 헤더 준비
-    headers = get_api_credentials(
-        manual_client_id=client_id_input,
-        manual_client_secret=client_secret_input,
-        auth_type=auth_type
-    )
+    # 2. 인증 헤더 준비 (환경변수 또는 Secrets에서 로드)
+    headers = get_api_credentials(auth_type=auth_type)
 
     if not headers:
-        st.error("⚠️ 네이버 API 자격증명이 필요합니다. 사이드바의 설정창이나 `.env` 파일에 Client ID와 Secret을 입력해 주세요.")
+        st.error("⚠️ 네이버 API 자격증명이 필요합니다. `.env` 파일이나 배포 환경의 Secrets 설정을 확인해 주세요.")
         st.stop()
 
     with st.spinner(f"네이버 8대 채널 및 데이터랩 트렌드 데이터를 수집 및 분석 중입니다... ({', '.join(raw_keywords)})"):
