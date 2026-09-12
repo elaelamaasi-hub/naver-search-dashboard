@@ -140,15 +140,28 @@ def extract_keywords(
 def get_korean_font_path() -> Optional[str]:
     """Windows/macOS/Linux 시스템의 한글 폰트 경로를 탐색합니다."""
     candidate_paths = [
-        r"C:\Windows\Fonts\malgun.ttf",       # 맑은 고딕
-        r"C:\Windows\Fonts\malgunbd.ttf",     # 맑은 고딕 볼드
-        r"C:\Windows\Fonts\gulim.ttc",        # 굴림
+        r"C:\Windows\Fonts\malgun.ttf",       # 맑은 고딕 (Windows)
+        r"C:\Windows\Fonts\malgunbd.ttf",     # 맑은 고딕 볼드 (Windows)
+        r"C:\Windows\Fonts\gulim.ttc",        # 굴림 (Windows)
         "/System/Library/Fonts/AppleSDGothicNeo.ttc", # macOS
-        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf", # Linux
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf", # Linux (Streamlit Cloud fonts-nanum)
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothic.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     ]
     for p in candidate_paths:
         if os.path.exists(p):
             return p
+            
+    # Matplotlib font manager fallback
+    try:
+        import matplotlib.font_manager as fm
+        nanum_fonts = [f.fname for f in fm.fontManager.ttflist if any(k in f.name.lower() for k in ["nanum", "gothic", "malgun"])]
+        if nanum_fonts:
+            return nanum_fonts[0]
+    except Exception:
+        pass
+        
     return None
 
 def generate_wordcloud_image(

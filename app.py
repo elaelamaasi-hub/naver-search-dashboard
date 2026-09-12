@@ -77,8 +77,15 @@ with st.sidebar.expander("🔑 네이버 API 인증 설정", expanded=True):
     
     from dotenv import load_dotenv
     load_dotenv(override=True)
-    default_client_id = os.getenv("NAVER_CLIENT_ID", "") or os.getenv("NCLOUD_API_KEY_ID", "")
-    default_client_secret = os.getenv("NAVER_CLIENT_SECRET", "") or os.getenv("NCLOUD_API_KEY", "")
+    
+    def _get_val(key: str) -> str:
+        v = os.getenv(key, "")
+        if not v and hasattr(st, "secrets") and key in st.secrets:
+            v = str(st.secrets[key])
+        return v
+
+    default_client_id = _get_val("NAVER_CLIENT_ID") or _get_val("NCLOUD_API_KEY_ID")
+    default_client_secret = _get_val("NAVER_CLIENT_SECRET") or _get_val("NCLOUD_API_KEY")
     
     client_id_input = st.text_input(
         "Client ID / API Key ID",

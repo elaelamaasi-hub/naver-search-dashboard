@@ -52,11 +52,23 @@ def get_api_credentials(
     UI에서 직접 입력한 값이 있으면 우선 사용하고, 없을 경우 .env 환경변수를 참조합니다.
     """
     load_dotenv(override=True)
+
+    def _read_env_or_secret(key: str) -> str:
+        val = os.getenv(key, "").strip()
+        if not val:
+            try:
+                import streamlit as st
+                if hasattr(st, "secrets") and key in st.secrets:
+                    val = str(st.secrets[key]).strip()
+            except Exception:
+                pass
+        return val
+
     client_id = manual_client_id.strip() if manual_client_id else (
-        os.getenv("NAVER_CLIENT_ID", "").strip() or os.getenv("NCLOUD_API_KEY_ID", "").strip()
+        _read_env_or_secret("NAVER_CLIENT_ID") or _read_env_or_secret("NCLOUD_API_KEY_ID")
     )
     client_secret = manual_client_secret.strip() if manual_client_secret else (
-        os.getenv("NAVER_CLIENT_SECRET", "").strip() or os.getenv("NCLOUD_API_KEY", "").strip()
+        _read_env_or_secret("NAVER_CLIENT_SECRET") or _read_env_or_secret("NCLOUD_API_KEY")
     )
     
     if not client_id or not client_secret:
